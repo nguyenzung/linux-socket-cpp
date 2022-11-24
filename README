@@ -1,0 +1,3 @@
+Socket example in CPP
+
+Server uses Epoll to handle events
