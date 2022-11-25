@@ -27,6 +27,8 @@ protected:
     int maxConns;
     int maxEvents;
 
+    struct timeval timeout; 
+
 public:
     ServerTCP(int port, int maxConns = MAX_SERVER_CONNECTIONS, int maxEvents = MAX_EPOLL_EVENTS);
     ~ServerTCP();
@@ -35,6 +37,10 @@ public:
 
 protected:
     void setup();
+
+    void setTimeout(int microseconds);
+    void setWRTimeout(int socketFd);
+
     void makeEPoll();
     void makeSocketListener();
     void makeSocketNonBlocking(int socketFd);
