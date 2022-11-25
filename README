@@ -1,3 +1,17 @@
 Socket example in CPP
 
-Server uses Epoll to handle events
+==============================
+[Compile server]
+1. cd server
+2. mkdir build
+3. cd build
+4. cmake ..
+5. make
+
+==============================
+[Compile client]
+1. cd client
+2. mkdir build
+3. cd build
+4. cmake ..
+5. make
