@@ -77,7 +77,10 @@ void ServerTCP::makeSocketListener()
     serverAddress.sin_port = htons(port);
 
     if (bind(sockFd, (struct sockaddr *) &serverAddress, sizeof(serverAddress)) < 0)
+    {
+        printf("\nERROR binding socket");
         throw("ERROR binding socket");
+    }
     
     makeSocketNonBlocking(sockFd);
     addSocketConnToEpoll(sockFd);
@@ -131,31 +134,34 @@ void ServerTCP::run()
         {
             if (events[n].data.fd == sockFd) 
             {
-                int connFd = accept(sockFd, (struct sockaddr *) &clientAddress, (socklen_t*)&clientSize);
-                printf("\nAccept new connection");
-                if (connFd == -1)
+                int connFd;
+                while(connFd = accept(sockFd, (struct sockaddr *) &clientAddress, (socklen_t*)&clientSize), connFd >= 0)
                 {
-                    perror("accept connection error");
-                    continue;
-                }
-                setWRTimeout(connFd);
-                makeSocketNonBlocking(connFd);
-                addSocketConnToEpoll(connFd);
-            } else {
-                printf("\nAnother event from : %d %d. ThreadID %ld", events[n].data.fd, events[n].events, pthread_self());
-                if (events[n].events | EPOLLIN) 
-                {
-                    char buffer[256];
-                    memset(buffer, 0, 256);
-                    if(read(events[n].data.fd, buffer, 255) < 0)
+                    printf("\nAccept new connection");
+                    if (connFd == -1)
                     {
-                        printf("\n ERROR ");
-                        perror("ERROR reading from socket");
-                        close(events[n].data.fd);
+                        perror("accept connection error");
                         continue;
                     }
-                    printf("\n Message from client %s", buffer);
-                    write(events[n].data.fd, "OK", 3);
+                    setWRTimeout(connFd);
+                    makeSocketNonBlocking(connFd);
+                    addSocketConnToEpoll(connFd);
+                }                
+            } else {
+                printf("\nAnother event from : %d %d. ThreadID %ld", events[n].data.fd, events[n].events, pthread_self());
+                if (events[n].events & EPOLLIN) 
+                {
+                    char buffer[5];
+                    memset(buffer, 0, 5);
+                    int m, count = 0;
+                    while(m = read(events[n].data.fd, buffer, 5), m >=0)
+                    {
+                        count += m;
+                        printf("\n Message from client %s", buffer);
+                        memset(buffer, 0, 5);
+                    }
+                    int size = snprintf(buffer, 5, "%d", count);
+                    write(events[n].data.fd, buffer, 5);
                 }
 
                 if (events[n].events & EPOLLERR) 
