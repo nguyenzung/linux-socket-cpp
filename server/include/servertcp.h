@@ -38,9 +38,6 @@ public:
 protected:
     void setup();
 
-    void setTimeout(int microseconds);
-    void setWRTimeout(int socketFd);
-
     void makeEPoll();
     void makeSocketListener();
     void makeSocketNonBlocking(int socketFd);
