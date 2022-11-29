@@ -20,12 +20,23 @@ ServerTCP::ServerTCP(int port, int maxConns, int maxEvents)
 
 ServerTCP::~ServerTCP()
 {
+    printf("\n Exit program");
     delete[] events;
+
+    
+
     if (close(sockFd) < 0) 
         perror("\nCannot close socket listener");
 
     if (close(epollFd) < 0)
         perror("\nCannot close epoll");
+
+    for (auto it = openedFd.begin(); it != openedFd.end(); ++it)
+    {
+        printf("\n Close %d", *it);
+        removeSocketConnFromEpoll(*it);
+    }
+    
 }
 
 void ServerTCP::start()
@@ -94,6 +105,8 @@ void ServerTCP::run()
                 int connFd;
                 while(connFd = accept(sockFd, (struct sockaddr *) &clientAddress, (socklen_t*)&clientSize), connFd > 0)
                 {
+                    printf("\n Add %d", connFd);
+                    openedFd.insert(connFd);
                     makeSocketNonBlocking(connFd);
                     addSocketConnToEpoll(connFd);
                 }                
@@ -115,10 +128,10 @@ void ServerTCP::run()
                 }
 
                 if (events[n].events & EPOLLERR) 
-                    close(events[n].data.fd);
+                    removeSocketConnFromEpoll(events[n].data.fd);
 
-                if (events[n].events & EPOLLRDHUP) 
-                    close(events[n].data.fd);
+                if (events[n].events & EPOLLRDHUP)
+                    removeSocketConnFromEpoll(events[n].data.fd);
             }
         }
     }
@@ -130,4 +143,11 @@ void ServerTCP::addSocketConnToEpoll(int socketFd)
     event.events = EPOLLRDHUP | EPOLLERR | EPOLLIN | EPOLLET;   // Enable Edge-Trigger
     if (epoll_ctl (epollFd, EPOLL_CTL_ADD, socketFd, &event) == -1)
         throw ("Failed to add socket connection to epoll");
+}
+
+void ServerTCP::removeSocketConnFromEpoll(int socketFd)
+{
+    openedFd.erase(socketFd);
+    close(socketFd);
+    epoll_ctl (epollFd, EPOLL_CTL_DEL, socketFd, 0);
 }

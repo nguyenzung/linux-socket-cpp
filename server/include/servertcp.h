@@ -3,7 +3,7 @@
 
 #include <netinet/in.h>
 #include <sys/epoll.h>
-
+#include <unordered_set>
 
 namespace net
 {
@@ -27,7 +27,7 @@ protected:
     int maxConns;
     int maxEvents;
 
-    struct timeval timeout; 
+    std::unordered_set<int> openedFd;
 
 public:
     ServerTCP(int port, int maxConns = MAX_SERVER_CONNECTIONS, int maxEvents = MAX_EPOLL_EVENTS);
@@ -44,6 +44,7 @@ protected:
     void run();
 
     void addSocketConnToEpoll(int socketFd);
+    void removeSocketConnFromEpoll(int socketFd);
 };
 
 }
