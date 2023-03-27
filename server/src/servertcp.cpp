@@ -8,7 +8,7 @@
 #include <sys/socket.h>
 #include <pthread.h>
 
-#define READ_BUFFER_SIZE 64
+#define READ_BUFFER_SIZE 1024
 
 using namespace net;
 
@@ -23,8 +23,6 @@ ServerTCP::~ServerTCP()
     printf("\n Exit program");
     delete[] events;
 
-    
-
     if (close(sockFd) < 0) 
         perror("\nCannot close socket listener");
 
@@ -36,7 +34,6 @@ ServerTCP::~ServerTCP()
         printf("\n Close %d", *it);
         removeSocketConnFromEpoll(*it);
     }
-    
 }
 
 void ServerTCP::start()
@@ -63,7 +60,9 @@ void ServerTCP::makeSocketListener()
     sockFd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockFd < 0)
         throw("ERROR opening socket");
-    
+    int reuseAddr = 1;
+    setsockopt(sockFd, SOL_SOCKET, SO_REUSEADDR, &reuseAddr, sizeof(reuseAddr));
+
     memset(&serverAddress, 0, sizeof(serverAddress));
     serverAddress.sin_family = AF_INET;
     serverAddress.sin_addr.s_addr = INADDR_ANY;
@@ -71,7 +70,7 @@ void ServerTCP::makeSocketListener()
 
     if (bind(sockFd, (struct sockaddr *) &serverAddress, sizeof(serverAddress)) < 0)
         throw("ERROR binding socket");
-    
+
     makeSocketNonBlocking(sockFd);
     addSocketConnToEpoll(sockFd);
 }
@@ -94,13 +93,11 @@ void ServerTCP::run()
     {
         int nfds = epoll_wait(epollFd, events, maxEvents, -1);
         if (nfds == -1)
-        {
             throw("epoll_wait failed");
-        }
 
         for (int n = 0; n < nfds; ++n)
         {
-            if (events[n].data.fd == sockFd) 
+            if (events[n].data.fd == sockFd)
             {
                 int connFd;
                 while(connFd = accept(sockFd, (struct sockaddr *) &clientAddress, (socklen_t*)&clientSize), connFd > 0)
@@ -109,7 +106,7 @@ void ServerTCP::run()
                     openedFd.insert(connFd);
                     makeSocketNonBlocking(connFd);
                     addSocketConnToEpoll(connFd);
-                }                
+                }
             } else {
                 if (events[n].events & EPOLLIN) 
                 {
