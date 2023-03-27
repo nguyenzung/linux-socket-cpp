@@ -118,7 +118,6 @@ void ServerTCP::run()
                     {
                         m += size;
                         write(1, buffer, size);
-                        memset(buffer, 0, READ_BUFFER_SIZE);
                     }
                     snprintf(buffer, 5, "%d", m);
                     write(events[n].data.fd, buffer, 5);
@@ -144,6 +143,7 @@ void ServerTCP::addSocketConnToEpoll(int socketFd)
 
 void ServerTCP::removeSocketConnFromEpoll(int socketFd)
 {
+    printf("\n [Close: %d] \n", socketFd);
     openedFd.erase(socketFd);
     close(socketFd);
     epoll_ctl (epollFd, EPOLL_CTL_DEL, socketFd, 0);
